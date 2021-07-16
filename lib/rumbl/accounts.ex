@@ -31,4 +31,33 @@ defmodule Rumbl.Accounts do
       |> User.changeset(attrs)
       |> Repo.insert()
   end
+
+  def change_registration(%User{} = user, params) do
+    User.registration_changeset(user, params)
+  end
+
+  def register_user(attrs \\ %{}) do
+    %User{}
+      |> User.registration_changeset(attrs)
+      |> Repo.insert()
+  end
+
+  def authenticate_by_username_and_pass(username, given_pass) do
+    user = get_user_by(username: username)
+
+    cond do
+      user && Pbkdf2.verify_pass(given_pass, user.password_hash) ->
+        {:ok, user}
+
+      user ->
+        {:error, :unauthorized}
+
+      # If the user is not found, use comeonin's no_user_verify() function to
+      # simulate a password check with variable timing to harden the
+      # authentication layer against timing attacks and keep this application secure.
+      true ->
+        Pbkdf2.no_user_verify()
+        {:error, :not_found}
+    end
+  end
 end
